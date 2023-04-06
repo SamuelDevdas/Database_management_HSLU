@@ -73,14 +73,48 @@ select count(distinct(publisher))
 from publisher;
 
 
-# Create table genre from genre column in books table
+# Create table book_has_genre from genre column in books table after 
+#normalising it with R into a new csv file 
 
-CREATE TABLE genres (
-    genre_id INT PRIMARY KEY,
-    genres VARCHAR(255)
+CREATE TABLE book_has_genre (
+    ISBN_13 VARCHAR(20),
+    genre VARCHAR(255)
 );
 
-LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/genres.csv"
-INTO TABLE genres
+LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/book_has_genres.csv"
+INTO TABLE book_has_genre
 FIELDS TERMINATED BY ',' 
 IGNORE 1 LINES;
+
+# check
+SELECT count(*)
+FROM book_has_genre;
+
+# Create a new table genre with the columns genre_id and genre from the book_has_genre
+
+CREATE TABLE genres (
+  genre_id INT AUTO_INCREMENT PRIMARY KEY,
+  genre VARCHAR(255) UNIQUE NOT NULL
+);
+
+# Insert data from book_has_genre into genre table
+INSERT INTO genres (genre)
+SELECT DISTINCT genre
+FROM book_has_genre;
+
+# check
+SELECT *
+FROM genres;
+SELECT count(*)
+FROM genres;
+
+# Now add primary and foreign key constraints to existing table book_has_genres
+ALTER TABLE book_has_genre
+ADD CONSTRAINT pk_book_has_genre PRIMARY KEY (ISBN_13, genre),
+ADD CONSTRAINT fk_book_has_genre_books FOREIGN KEY (ISBN_13) REFERENCES Books(ISBN_13),
+ADD CONSTRAINT fk_book_has_genre_genres FOREIGN KEY (genre) REFERENCES genres(genre);
+
+
+
+
+
