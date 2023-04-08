@@ -124,9 +124,6 @@ typeof(merged_updated$isbn)
 
 
 ##############################################
-#PENDING
-# Inspect Users source file as uploading to users table
-# gives "Error Code: 1300. Invalid utf8mb4 character string: '"1407 k'"
 
 ########################################################
 
@@ -170,7 +167,7 @@ write.csv(book_has_genres, "book_has_genres.csv", row.names = FALSE)
 
 ###############################################################
 
-#9. Create a new dataframe with isbn and author, for 
+#10. Create a new dataframe with isbn and author, for 
 # book_has_author table
 
 # Check unique authors in merged_updated
@@ -203,3 +200,81 @@ write.csv(book_has_author, "book_has_author.csv", row.names = FALSE)
 
 
 ###################################################################
+
+#11. Create a new dataframe with isbn and setting column, for 
+# book_has_setting table
+
+# Load the necessary libraries
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# Parse the setting lists and create a new data frame with isbn and setting
+book_has_setting <- merged_updated %>%
+  # Extract individual setting from the setting lists
+  mutate(setting = str_replace_all(genres, "\\[|\\]|'", "")) %>%
+  separate_rows(setting, sep = ", ") %>%
+  # Remove duplicates and create isbn
+  distinct(isbn, setting) %>%
+  select(isbn, setting)
+
+
+# View the book_has_setting data frame
+View(book_has_setting)
+
+#Check if all isbn are present
+length(unique(book_has_setting$isbn))
+
+#save as csv to load into sql
+write.csv(book_has_setting, "book_has_setting.csv", row.names = FALSE)
+
+
+#############################################################################
+#PENDING
+# Inspect Users source file as uploading to users table
+# gives "Error Code: 1300. Invalid utf8mb4 character string: '"1407 k'"
+
+
+users <- read.csv('Users.csv', sep = ';')
+head(users)
+View(users)
+
+# Search for a specific string in the 'text' column
+search_string <- "1407 k"
+error_found <- grepl(search_string, users$Location)
+
+error_row <- users[error_found,]
+
+# Display the row with the search results
+print(error_row)
+
+# Remove row 319 from the df users and update users
+users <- users[-319,]
+
+# Error Code: 1300. Invalid utf8mb4 character string: '10745;saarbr'
+
+
+# Save updated users file as csv for loading 
+write.csv(users, "users_updated.csv", row.names = FALSE)
+
+
+################################################################
+# after adding ISBN_13 column with python,
+# remoove isbn10 column from the csv file
+
+ratings <- read.csv('User_ratings_isbn13.csv', sep = ',')
+
+View(ratings)
+
+ratings <- ratings[,-2]
+
+# change order of ISBN_13 and book ratings columns
+
+ratings <- ratings[,c("User.ID", "ISBN_13", "Book.Rating")]
+
+# Save updated ratings file as csv for loading 
+write.csv(ratings, "ratings_updated.csv", row.names = FALSE)
+
+
+
+
