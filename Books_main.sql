@@ -1,280 +1,256 @@
-options(scipen = 100 )
-
-
-#1. Load the datasets for books 
-
-book_coll <- read.csv('Books.csv', sep = ';')
-length(book_coll$ISBN)
-length(unique(book_coll$ISBN))
-length(unique(book_coll$Book.Title))
-#head(book_coll)
-str(book_coll)
-
-######################################
-
-book_goodreads <- read.csv('book_goodreads1.csv')
-#head(book_goodreads)
-
-length(book_goodreads$isbn)
-length(unique(book_goodreads$isbn))
-length(unique(book_goodreads$Book.Title))
-str(book_goodreads)
-#############################
-
-book_bbe <- read.csv('books_1.Best_Books_Ever.csv')
-#head(book_goodreads)
-
-length(book_bbe$isbn)
-length(unique(book_bbe$isbn))
-
-str(book_bbe)
-head(book_bbe)
-#################################
-
-#2. isbn13 added in book_bbe with python
-
-book_bbe_13 <- read.csv('Books_isbn13.csv')
-str(book_bbe_13)
-head(book_bbe_13) 
-
-##########################################
-
-#3. merge book_coll with book_bbe_13
-merged_df <- merge(book_bbe,book_bbe_13, 
-                   by.x = 'isbn', 
-                   by.y = 'ISBN.13')
-
-head(merged_df)
-str(merged_df)
-
-write.csv(merged_df, "merged_books.csv", row.names = FALSE)
-
-############################################
-
-# load merged_books to inspect columns
-
-merg_books <- read.csv('merged_books.csv')
-str(merg_books)
-View(merg_books)
-
-sum(is.na(merg_books$author))
-
-########################################
-
-#4.remove redundant columns 
-
-merged_updated <- subset(x = merg_books, select = -c(bookId, author, coverImg, 
-                                                     Book.Title, Publisher, Image.URL.S,
-                                                     Image.URL.M, Image.URL.L))
-
-str(merged_updated)
-View(merged_updated)
-
-
-
-
-###################################
-# inspect ratings
-hist(merged_updated$rating, breaks = 40)
-summary(merged_updated$rating)
-boxplot(merged_updated$rating)
-
-
-
-#################################
-
-#5. Check how many books have no awards
-length(merged_updated$awards)
-sum(merged_updated$awards =='[]')
-sum(merged_updated$awards !='[]')
-
-sum(merged_updated$awards !='[]')+sum(merged_updated$awards =='[]')
-
-sum(is.na(merged_updated$awards))
-
-
-#############################################
-#6. Therefore, It makes sense to create a column book_has_award
-install.packages("dplyr")
-library(dplyr)
-
-merged_updated <- merged_updated %>%
-  mutate(has_award = ifelse(awards != "[]", 1, 0))
-
-View(merged_updated)
-
-
-##################################################
-
-#7. save the updated table with has_award column to csv
-
-write.csv(merged_updated, "merged_updated.csv", row.names = FALSE)
-
-
-
-
-################################################
-##inspect merged_updated
-
-merged_updated <- read.csv('merged_updated.csv')
-View(merged_updated)
-str(merged_updated)
-
-typeof(merged_updated$isbn)
-
-
-##############################################
-
-########################################################
-
-#8. Inspect publishers columnn in book to find number of uniques
-
-merged_updated <- read.csv('merged_updated.csv')
-View(merged_updated)
-str(merged_updated)
-length(unique(merged_updated$publisher))
-
-head(merged_updated)
-
-########################################################
-
-#9. Create a new dataframe with isbn and genres column, for 
-# book_has_genres table
-
-# Load the necessary libraries
-library(dplyr)
-library(tidyr)
-library(stringr)
-
-# Parse the genre lists and create a new data frame with isbn and genre names
-book_has_genres <- merged_updated %>%
-  # Extract individual genres from the genre lists
-  mutate(genres = str_replace_all(genres, "\\[|\\]|'", "")) %>%
-  separate_rows(genres, sep = ", ") %>%
-  # Remove duplicates and create isbn
-  distinct(isbn, genres) %>%
-  select(isbn, genres)
-
-
-# View the book_has_genres data frame
-View(book_has_genres)
-
-#Check if all genres are present
-length(unique(book_has_genres$genres))
-
-#save as csv to load into sql
-write.csv(book_has_genres, "book_has_genres.csv", row.names = FALSE)
-
-###############################################################
-
-#10. Create a new dataframe with isbn and author, for 
-# book_has_author table
-
-# Check unique authors in merged_updated
-
-length(unique(merged_updated$Book.Author)) # ==4547
-
-
-# Load the necessary libraries
-library(dplyr)
-library(tidyr)
-library(stringr)
-
-# Parse the Book.Author column and create a new data frame with isbn and author names
-book_has_author <- merged_updated %>%
-
-  # Remove duplicates and create isbn
-  distinct(isbn, Book.Author) %>%
-  select(isbn, Book.Author)
-
-
-# View the book_has_genres data frame
-View(book_has_author)
-
-#Check if all authors are present == TRUE
-length(unique(book_has_author$Book.Author != is.character("n/a"))) #==4547
-length(unique(book_has_author$isbn)) #== 8206
-
-#save as csv to load into sql
-write.csv(book_has_author, "book_has_author.csv", row.names = FALSE)
-
-
 ###################################################################
 
-#11. Create a new dataframe with isbn and setting column, for 
-# book_has_setting table
-
-# Load the necessary libraries
-library(dplyr)
-library(tidyr)
-library(stringr)
-
-# Parse the setting lists and create a new data frame with isbn and setting
-book_has_setting <- merged_updated %>%
-  # Extract individual setting from the setting lists
-  mutate(setting = str_replace_all(genres, "\\[|\\]|'", "")) %>%
-  separate_rows(setting, sep = ", ") %>%
-  # Remove duplicates and create isbn
-  distinct(isbn, setting) %>%
-  select(isbn, setting)
+#R code
+##########################################################
 
 
-# View the book_has_setting data frame
-View(book_has_setting)
+CREATE DATABASE BooksDB;
+USE BooksDB;
 
-#Check if all isbn are present
-length(unique(book_has_setting$isbn))
+CREATE TABLE Books(
+ISBN_13 VARCHAR(13) PRIMARY KEY,
+title TEXT,
+series TEXT,
+rating_bbe INTEGER,
+description TEXT,
+language TEXT,
+genres TEXT,
+characters TEXT,
+book_format TEXT,
+edition TEXT,
+pages TEXT,
+publisher TEXT,
+publish_date TEXT,
+first_publish_date TEXT,
+awards TEXT,
+num_ratings INTEGER,
+ratings_by_stars TEXT,
+liked_percent INTEGER,
+setting TEXT,
+bbe_score  INTEGER,
+bbe_votes INTEGER,
+price TEXT,
+ISBN_10 TEXT,
+author TEXT,
+year_of_publication INTEGER,
+has_award INTEGER);
 
-#save as csv to load into sql
-write.csv(book_has_setting, "book_has_setting.csv", row.names = FALSE)
+SET GLOBAL local_infile = TRUE;
+
+LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/merged_updated.csv"
+INTO TABLE Books
+FIELDS TERMINATED BY ',' ENCLOSED BY '"'
+IGNORE 1 LINES;
+ 
+SELECT * FROM Books;
+SELECT count(distinct(ISBN_13)) FROM Books;
 
 
-#############################################################################
-#NOT REQUIRED USED NOTEPAD
-# Inspect Users source file as uploading to users table
+
+
+# Create publisher entity table with unique created from parent book table
+
+CREATE TABLE Publisher (
+  publisher_id INT AUTO_INCREMENT PRIMARY KEY,
+  publisher TEXT
+);
+
+#Insert unique publishers from the Books table into the Publisher table
+INSERT INTO Publisher (publisher)
+SELECT DISTINCT publisher
+FROM Books;
+
+select count(distinct(publisher))
+from publisher;
+
+#########################################################################
+# Create table book_has_genre from genre column in books table after 
+#normalising it with R into a new csv file 
+
+CREATE TABLE book_has_genre (
+    ISBN_13 VARCHAR(20),
+    genre VARCHAR(255)
+);
+
+LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/book_has_genres.csv"
+INTO TABLE book_has_genre
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES;
+
+# check
+SELECT count(*)
+FROM book_has_genre;
+
+# Create a new table genre with the columns genre_id and genre from the book_has_genre
+
+CREATE TABLE genres (
+  genre_id INT AUTO_INCREMENT PRIMARY KEY,
+  genre VARCHAR(255) UNIQUE NOT NULL
+);
+
+# Insert data from book_has_genre into genre table
+INSERT INTO genres (genre)
+SELECT DISTINCT genre
+FROM book_has_genre;
+
+# check
+SELECT *
+FROM genres;
+SELECT count(*)
+FROM genres;
+
+# Now add primary and foreign key constraints to existing table book_has_genres
+ALTER TABLE book_has_genre
+ADD CONSTRAINT pk_book_has_genre PRIMARY KEY (ISBN_13, genre),
+ADD CONSTRAINT fk_book_has_genre_books FOREIGN KEY (ISBN_13) REFERENCES Books(ISBN_13),
+ADD CONSTRAINT fk_book_has_genre_genres FOREIGN KEY (genre) REFERENCES genres(genre);
+
+
+#########################################################################################
+
+# Create table book_has_author from Book.Author column in books table after 
+#normalising it with R into a new csv file 
+
+CREATE TABLE book_has_author (
+    ISBN_13 VARCHAR(20),
+    author VARCHAR(255)
+);
+
+LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/book_has_author.csv"
+INTO TABLE book_has_author
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES;
+
+# check
+SELECT *
+FROM book_has_author
+WHERE ISBN_13 IS NULL OR author IS NULL;
+
+
+
+# Create a new table authors with the columns author_id and author from the book_has_author table
+
+CREATE TABLE authors (
+  author_id INT AUTO_INCREMENT PRIMARY KEY,
+  author VARCHAR(255) UNIQUE NOT NULL
+);
+
+# Insert authors from book_has_author into authors table
+INSERT INTO authors (author)
+SELECT DISTINCT author
+FROM book_has_author;
+
+# check
+SELECT *
+FROM authors;
+SELECT count(*)
+FROM authors;
+
+
+# Now add primary and foreign key constraints to existing table book_has_author
+ALTER TABLE book_has_author
+ADD CONSTRAINT pk_book_has_author PRIMARY KEY (ISBN_13, author),
+ADD CONSTRAINT fk_book_has_author_books FOREIGN KEY (ISBN_13) REFERENCES Books(ISBN_13),
+ADD CONSTRAINT fk_book_has_author_genres FOREIGN KEY (author) REFERENCES authors(author);
+
+
+
+#########################################################################################
+
+# Create table book_has_setting from setting column in books table after 
+#normalising it with R into a new csv file 
+
+CREATE TABLE book_has_setting (
+    ISBN_13 VARCHAR(20),
+    setting VARCHAR(255)
+);
+
+LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/book_has_setting.csv"
+INTO TABLE book_has_setting
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES;
+
+# check
+SELECT *
+FROM book_has_setting
+WHERE ISBN_13 IS NULL OR setting IS NULL;
+
+
+
+# Create a new table authors with the columns author_id and author from the book_has_author table
+
+CREATE TABLE settings (
+  setting_id INT AUTO_INCREMENT PRIMARY KEY,
+  setting VARCHAR(255) UNIQUE NOT NULL
+);
+
+# Insert authors from book_has_author into authors table
+INSERT INTO settings (setting)
+SELECT DISTINCT setting
+FROM book_has_setting;
+
+# check
+SELECT *
+FROM settings;
+SELECT count(*)
+FROM settings;
+
+
+# Now add primary and foreign key constraints to existing table book_has_author
+ALTER TABLE book_has_setting
+ADD CONSTRAINT pk_book_has_setting PRIMARY KEY (ISBN_13, setting),
+ADD CONSTRAINT fk_book_has_setting_books FOREIGN KEY (ISBN_13) REFERENCES Books(ISBN_13),
+ADD CONSTRAINT fk_book_has_setting_settings FOREIGN KEY (setting) REFERENCES settings(setting);
+
+##################################################################################################
+
+###########################################################################################
+
+# Create users table
+# change encoding to utf8
 # gives "Error Code: 1300. Invalid utf8mb4 character string: '"1407 k'"
+# The line separator was found to be as follows: # user_id, location, age '2', 'stockton, california, usa', '18\"\r\n\"3'
+
+CREATE TABLE users (
+  user_id VARCHAR(255),
+  location VARCHAR(255),
+  age VARCHAR(255)
+);
+
+LOAD DATA LOCAL INFILE 'C:/Users/samue/Desktop/book_reviews/users_utf8.csv'
+INTO TABLE users
+FIELDS TERMINATED BY ';' ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 LINES;
+
+ALTER TABLE users
+ADD CONSTRAINT users PRIMARY KEY (user_id);
 
 
-users <- read.csv('Users.csv', sep = ';')
-head(users)
-View(users)
+#########################################################################################
+# Create table user_has_rating from csv file 
 
-# Search for a specific string in the 'text' column
-search_string <- "1407 k"
-error_found <- grepl(search_string, users$Location)
+#CREATE TABLE user_has_rating (
+ # user_id VARCHAR(255),
+ # ISBN_13 VARCHAR(255),
+ # rating VARCHAR(255)
+#);
 
-error_row <- users[error_found,]
+CREATE TABLE user_has_rating (
+  user_id VARCHAR(255),
+  ISBN_13 VARCHAR(255),
+  rating VARCHAR(255),
+  PRIMARY KEY (user_id, ISBN_13),
+  FOREIGN KEY (user_id) REFERENCES users(user_id),
+  FOREIGN KEY (ISBN_13) REFERENCES books(ISBN_13)
+);
 
-# Display the row with the search results
-print(error_row)
+LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/ratings_updated.csv"
+INTO TABLE user_has_rating
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES;
 
-# Remove row 319 from the df users and update users
-users <- users[-319,]
-
-# Error Code: 1300. Invalid utf8mb4 character string: '10745;saarbr'
-
-
-# Save updated users file as csv for loading 
-write.csv(users, "users_updated.csv", row.names = FALSE)
-
-
-################################################################
-# after adding ISBN_13 column with python,
-# remoove isbn10 column from the csv file
-
-ratings <- read.csv('User_ratings_isbn13.csv', sep = ',')
-
-View(ratings)
-
-ratings <- ratings[,-2]
-
-# change order of ISBN_13 and book ratings columns
-
-ratings <- ratings[,c("User.ID", "ISBN_13", "Book.Rating")]
-
-# Save updated ratings file as csv for loading 
-write.csv(ratings, "ratings_updated.csv", row.names = FALSE)
-
-
-
-
+#ALTER TABLE user_has_rating
+#ADD CONSTRAINT pk_user_has_rating PRIMARY KEY (user_id, ISBN_13),
+#ADD CONSTRAINT fk_user_has_rating_users FOREIGN KEY (user_id) REFERENCES users(user_id),
+#ADD CONSTRAINT fk_user_has_rating_books FOREIGN KEY (ISBN_13) REFERENCES books(ISBN_13);
