@@ -1,3 +1,9 @@
+###################################################################
+
+#R code
+##########################################################
+
+
 CREATE DATABASE BooksDB;
 USE BooksDB;
 
@@ -72,7 +78,7 @@ FROM Books;
 select count(distinct(publisher))
 from publisher;
 
-
+#########################################################################
 # Create table book_has_genre from genre column in books table after 
 #normalising it with R into a new csv file 
 
@@ -115,6 +121,51 @@ ADD CONSTRAINT fk_book_has_genre_books FOREIGN KEY (ISBN_13) REFERENCES Books(IS
 ADD CONSTRAINT fk_book_has_genre_genres FOREIGN KEY (genre) REFERENCES genres(genre);
 
 
+#########################################################################################
 
+# Create table book_has_author from Book.Author column in books table after 
+#normalising it with R into a new csv file 
+
+CREATE TABLE book_has_author (
+    ISBN_13 VARCHAR(20),
+    author VARCHAR(255)
+);
+
+LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/book_has_author.csv"
+INTO TABLE book_has_author
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES;
+
+# check
+SELECT *
+FROM book_has_author
+WHERE ISBN_13 IS NULL OR author IS NULL;
+
+
+
+# Create a new table authors with the columns author_id and author from the book_has_author table
+
+CREATE TABLE authors (
+  author_id INT AUTO_INCREMENT PRIMARY KEY,
+  author VARCHAR(255) UNIQUE NOT NULL
+);
+
+# Insert authors from book_has_author into authors table
+INSERT INTO authors (author)
+SELECT DISTINCT author
+FROM book_has_author;
+
+# check
+SELECT *
+FROM authors;
+SELECT count(*)
+FROM authors;
+
+
+# Now add primary and foreign key constraints to existing table book_has_author
+ALTER TABLE book_has_author
+ADD CONSTRAINT pk_book_has_author PRIMARY KEY (ISBN_13, author),
+ADD CONSTRAINT fk_book_has_author_books FOREIGN KEY (ISBN_13) REFERENCES Books(ISBN_13),
+ADD CONSTRAINT fk_book_has_author_genres FOREIGN KEY (author) REFERENCES authors(author);
 
 
