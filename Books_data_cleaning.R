@@ -169,3 +169,37 @@ length(unique(book_has_genres$genres))
 write.csv(book_has_genres, "book_has_genres.csv", row.names = FALSE)
 
 ###############################################################
+
+#9. Create a new dataframe with isbn and author, for 
+# book_has_author table
+
+# Check unique authors in merged_updated
+
+length(unique(merged_updated$Book.Author)) # ==4547
+
+
+# Load the necessary libraries
+library(dplyr)
+library(tidyr)
+library(stringr)
+
+# Parse the Book.Author column and create a new data frame with isbn and author names
+book_has_author <- merged_updated %>%
+
+  # Remove duplicates and create isbn
+  distinct(isbn, Book.Author) %>%
+  select(isbn, Book.Author)
+
+
+# View the book_has_genres data frame
+View(book_has_author)
+
+#Check if all authors are present == TRUE
+length(unique(book_has_author$Book.Author != is.character("n/a"))) #==4547
+length(unique(book_has_author$isbn)) #== 8206
+
+#save as csv to load into sql
+write.csv(book_has_author, "book_has_author.csv", row.names = FALSE)
+
+
+###################################################################
