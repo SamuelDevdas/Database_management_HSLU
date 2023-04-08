@@ -169,3 +169,87 @@ ADD CONSTRAINT fk_book_has_author_books FOREIGN KEY (ISBN_13) REFERENCES Books(I
 ADD CONSTRAINT fk_book_has_author_genres FOREIGN KEY (author) REFERENCES authors(author);
 
 
+
+#########################################################################################
+
+# Create table book_has_setting from setting column in books table after 
+#normalising it with R into a new csv file 
+
+CREATE TABLE book_has_setting (
+    ISBN_13 VARCHAR(20),
+    setting VARCHAR(255)
+);
+
+LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/book_has_setting.csv"
+INTO TABLE book_has_setting
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES;
+
+# check
+SELECT *
+FROM book_has_setting
+WHERE ISBN_13 IS NULL OR setting IS NULL;
+
+
+
+# Create a new table authors with the columns author_id and author from the book_has_author table
+
+CREATE TABLE settings (
+  setting_id INT AUTO_INCREMENT PRIMARY KEY,
+  setting VARCHAR(255) UNIQUE NOT NULL
+);
+
+# Insert authors from book_has_author into authors table
+INSERT INTO settings (setting)
+SELECT DISTINCT setting
+FROM book_has_setting;
+
+# check
+SELECT *
+FROM settings;
+SELECT count(*)
+FROM settings;
+
+
+# Now add primary and foreign key constraints to existing table book_has_author
+ALTER TABLE book_has_setting
+ADD CONSTRAINT pk_book_has_setting PRIMARY KEY (ISBN_13, setting),
+ADD CONSTRAINT fk_book_has_setting_books FOREIGN KEY (ISBN_13) REFERENCES Books(ISBN_13),
+ADD CONSTRAINT fk_book_has_setting_settings FOREIGN KEY (setting) REFERENCES settings(setting);
+
+##################################################################################################
+
+###########################################################################################
+
+# Create users table
+# change encoding to utf8
+# gives "Error Code: 1300. Invalid utf8mb4 character string: '"1407 k'"
+# The line separator was found to be as follows: # user_id, location, age '2', 'stockton, california, usa', '18\"\r\n\"3'
+
+CREATE TABLE users (
+  user_id VARCHAR(255),
+  location VARCHAR(255),
+  age VARCHAR(255)
+);
+
+LOAD DATA LOCAL INFILE 'C:/Users/samue/Desktop/book_reviews/users_utf8.csv'
+INTO TABLE users
+FIELDS TERMINATED BY ';' ENCLOSED BY '"'
+LINES TERMINATED BY '\r\n'
+IGNORE 1 LINES;
+
+
+#########################################################################################
+# Create table user_has_rating from csv file 
+
+CREATE TABLE user_has_rating (
+  user_id VARCHAR(255),
+  ISBN_13 VARCHAR(255),
+  rating VARCHAR(255)
+);
+
+LOAD DATA LOCAL INFILE "C:/Users/samue/Desktop/book_reviews/ratings_updated.csv"
+INTO TABLE user_has_rating
+FIELDS TERMINATED BY ',' 
+IGNORE 1 LINES
+
